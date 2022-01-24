@@ -3,6 +3,7 @@
 namespace GeoSot\EnvEditor;
 
 use GeoSot\EnvEditor\Exceptions\EnvException;
+use GeoSot\EnvEditor\Helpers\EntryObj;
 use GeoSot\EnvEditor\Helpers\EnvFileContentManager;
 use GeoSot\EnvEditor\Helpers\EnvFilesManager;
 use GeoSot\EnvEditor\Helpers\EnvKeysManager;
@@ -17,25 +18,13 @@ use Symfony\Component\HttpFoundation\File\File;
  */
 class EnvEditor
 {
-    /**
-     * @var Repository
-     */
-    protected $config;
+    protected Repository $config;
 
-    /**
-     * @var EnvKeysManager
-     */
-    protected $keysManager;
+    protected EnvKeysManager $keysManager;
 
-    /**
-     * @var EnvFilesManager
-     */
-    protected $filesManager;
+    protected EnvFilesManager $filesManager;
 
-    /**
-     * @var EnvFileContentManager
-     */
-    protected $fileContentManager;
+    protected EnvFileContentManager $fileContentManager;
 
     public function __construct(Repository $config, Filesystem $filesystem)
     {
@@ -50,7 +39,7 @@ class EnvEditor
      *
      * @param  string  $fileName
      *
-     * @return Collection
+     * @return Collection<int, EntryObj>
      * @throws EnvException
      */
     public function getEnvFileContent(string $fileName = ''): Collection
@@ -60,15 +49,10 @@ class EnvEditor
 
     /**
      * Check if key Exist in Current env.
-     *
-     * @param  string  $key
-     *
-     * @return bool
-     * @throws EnvException
      */
     public function keyExists(string $key): bool
     {
-        return $this->getKeysManager()->keyExists($key);
+        return $this->getKeysManager()->has($key);
     }
 
     /**
@@ -78,11 +62,10 @@ class EnvEditor
      * @param  mixed  $default
      *
      * @return bool|float|int|string|null
-     * @throws EnvException
      */
     public function getKey(string $key, $default = null)
     {
-        return $this->getKeysManager()->getKey($key, $default);
+        return $this->getKeysManager()->get($key, $default);
     }
 
     /**
@@ -97,7 +80,7 @@ class EnvEditor
      */
     public function addKey(string $key, $value, array $options = []): bool
     {
-        return $this->getKeysManager()->addKey($key, $value, $options);
+        return $this->getKeysManager()->add($key, $value, $options);
     }
 
     /**
@@ -111,7 +94,7 @@ class EnvEditor
      */
     public function editKey(string $keyToChange, $newValue): bool
     {
-        return $this->getKeysManager()->editKey($keyToChange, $newValue);
+        return $this->getKeysManager()->edit($keyToChange, $newValue);
     }
 
     /**
@@ -124,7 +107,7 @@ class EnvEditor
      */
     public function deleteKey(string $key): bool
     {
-        return $this->getKeysManager()->deleteKey($key);
+        return $this->getKeysManager()->delete($key);
     }
 
     /**

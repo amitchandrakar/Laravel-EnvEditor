@@ -31,13 +31,10 @@ class EnvKeysManager
      * @param  string  $key
      *
      * @return bool
-     * @throws EnvException
      */
-    public function keyExists(string $key): bool
+    public function has(string $key): bool
     {
-        $env = $this->getEnvData();
-
-        return $env->firstWhere('key', '==', $key) !== null;
+        return $this->getFirst($key) instanceof EntryObj;
     }
 
     /**
@@ -47,13 +44,12 @@ class EnvKeysManager
      * @param  mixed  $default
      *
      * @return string|float|int|bool|null
-     * @throws EnvException
      */
-    public function getKey(string $key, $default = null)
+    public function get(string $key, $default = null)
     {
-        $result = $this->getEnvData()->firstWhere('key', '==', $key);
+        $result = $this->getFirst($key);
 
-        return $result ? $result['value'] ?: $default : $default;
+        return $result ? $result->getValue($default) : $default;
     }
 
     /**
@@ -66,9 +62,9 @@ class EnvKeysManager
      * @return bool
      * @throws EnvException
      */
-    public function addKey(string $key, $value, array $options = []): bool
+    public function add(string $key, $value, array $options = []): bool
     {
-        if ($this->keyExists($key)) {
+        if ($this->has($key)) {
             throw new EnvException(__(ServiceProvider::TRANSLATE_PREFIX.'exceptions.keyAlreadyExists', ['name' => $key]), 0);
         }
         $env = $this->getEnvData();
@@ -76,28 +72,24 @@ class EnvKeysManager
 
         $groupIndex = $givenGroup ?? $env->pluck('group')->unique()->sort()->last() + 1;
 
-        if (! $givenGroup && ! $env->last()['separator']) {
-            $separator = $this->getKeysSeparator((int) $groupIndex, $env->count() + 1);
+        if (! $givenGroup && ! $env->last()->isSeparator()) {
+            $separator = EntryObj::makeKeysSeparator((int) $groupIndex, $env->count() + 1);
             $env->push($separator);
         }
 
-        $lastSameGroupIndex = $env->last(function ($value, $key) use ($givenGroup) {
-            return explode('_', $value['key'], 2)[0] == strtoupper($givenGroup) && $value['key'] !== null;
+        $lastSameGroupIndex = $env->last(function (EntryObj $entry, $key) use ($givenGroup) {
+            return explode('_', $entry->key, 2)[0] == strtoupper($givenGroup) && $entry->key !== null;
         });
 
-        $keyArray = [
-            'key' => $key,
-            'value' => $value,
-            'group' => $groupIndex,
-            'index' => Arr::get(
-                $options,
-                'index',
-                $env->search($lastSameGroupIndex) ? $env->search($lastSameGroupIndex) + 0.1 : $env->count() + 2
-            ),
-            'separator' => false,
-        ];
+        $index = Arr::get(
+            $options,
+            'index',
+            $env->search($lastSameGroupIndex) ? $env->search($lastSameGroupIndex) + 0.1 : $env->count() + 2
+        );
 
-        $env->push($keyArray);
+        $entryObj = new EntryObj($key, $value, $groupIndex, $index);
+
+        $env->push($entryObj);
 
         return $this->envEditor->getFileContentManager()->save($env);
     }
@@ -111,18 +103,18 @@ class EnvKeysManager
      * @return bool
      * @throws EnvException
      */
-    public function editKey(string $keyToChange, $newValue): bool
+    public function edit(string $keyToChange, $newValue=null): bool
     {
-        if (! $this->keyExists($keyToChange)) {
-            throw  new EnvException(__(ServiceProvider::TRANSLATE_PREFIX.'exceptions.keyNotExists', ['name' => $keyToChange]), 11);
+        if (! $this->has($keyToChange)) {
+            throw new EnvException(__(ServiceProvider::TRANSLATE_PREFIX.'exceptions.keyNotExists', ['name' => $keyToChange]), 11);
         }
         $env = $this->getEnvData();
-        $newEnv = $env->map(function ($item) use ($keyToChange, $newValue) {
-            if ($item['key'] == $keyToChange) {
-                $item['value'] = $newValue;
+        $newEnv = $env->map(function (EntryObj $entry) use ($keyToChange, $newValue) {
+            if ($entry->key == $keyToChange) {
+                $entry->setValue($newValue);
             }
 
-            return $item;
+            return $entry;
         });
 
         return $this->envEditor->getFileContentManager()->save($newEnv);
@@ -136,42 +128,29 @@ class EnvKeysManager
      * @return bool
      * @throws EnvException
      */
-    public function deleteKey(string $key): bool
+    public function delete(string $key): bool
     {
-        if (! $this->keyExists($key)) {
+        if (! $this->has($key)) {
             throw  new EnvException(__(ServiceProvider::TRANSLATE_PREFIX.'exceptions.keyNotExists', ['name' => $key]), 10);
         }
         $env = $this->getEnvData();
-        $newEnv = $env->filter(function ($item) use ($key) {
-            return $item['key'] !== $key;
-        });
+        $newEnv = $env->filter(fn (EntryObj $entry) => $entry->key !== $key);
 
         return $this->envEditor->getFileContentManager()->save($newEnv);
     }
 
     /**
-     * @param  int  $groupIndex
-     * @param  int  $index
-     *
-     * @return array<string, mixed>
-     */
-    public function getKeysSeparator(int $groupIndex, int $index): array
-    {
-        return [
-            'key' => '',
-            'value' => '',
-            'group' => $groupIndex,
-            'index' => $index,
-            'separator' => true,
-        ];
-    }
-
-    /**
-     * @return Collection<int, array{key:string, value: int|string, group:int, index:int , separator:bool}>
-     * @throws EnvException
+     * @return Collection<int, EntryObj>
      */
     protected function getEnvData(): Collection
     {
         return $this->envEditor->getFileContentManager()->getParsedFileContent();
+    }
+
+    protected function getFirst(string $key): ?EntryObj
+    {
+        return $this->getEnvData()
+            ->reject(fn (EntryObj $entry) => $entry->isSeparator())
+            ->firstWhere('key', '==', $key);
     }
 }

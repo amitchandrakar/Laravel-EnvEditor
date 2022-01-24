@@ -13,21 +13,10 @@ use Symfony\Component\HttpFoundation\File\File;
 
 class EnvFilesManager
 {
-    /**
-     * @var EnvEditor
-     */
-    protected $envEditor;
+    protected EnvEditor $envEditor;
 
-    /**
-     * @var Filesystem
-     */
-    protected $filesystem;
+    protected Filesystem $filesystem;
 
-    /**
-     * Constructor.
-     *
-     * @param  EnvEditor  $envEditor
-     */
     public function __construct(EnvEditor $envEditor, Filesystem $filesystem)
     {
         $this->envEditor = $envEditor;
@@ -39,6 +28,7 @@ class EnvFilesManager
      * Get all Backup Files.
      *
      * @return Collection
+     * //     * @return Collection<int, array{real_name:string, name:string, created_at:int, modified_at:int, created_at_formatted:string, modified_at_formatted:string, content:string, path:string,parsed_data:Collection<int, EntryObj>}>
      */
     public function getAllBackUps(): Collection
     {
@@ -173,7 +163,7 @@ class EnvFilesManager
      */
     public function getBackupsDir(string $path = ''): string
     {
-        return storage_path($this->envEditor->config('paths.backupDirectory')).($path ? DIRECTORY_SEPARATOR.$path : $path);
+        return $this->envEditor->config('paths.backupDirectory').($path ? DIRECTORY_SEPARATOR.$path : $path);
     }
 
     /**
