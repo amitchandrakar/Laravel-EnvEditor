@@ -209,6 +209,7 @@ class FilesManagerTest extends TestCase
             new Repository($config ?: $this->app['config']->get('env-editor')),
             new Filesystem()
         );
-        return $envEditor->getFilesManager();
+        return new EnvFilesManager($envEditor, new Filesystem());
     }
 }
+
