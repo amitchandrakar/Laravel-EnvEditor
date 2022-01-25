@@ -103,7 +103,7 @@ class EnvKeysManager
      * @return bool
      * @throws EnvException
      */
-    public function edit(string $keyToChange, $newValue=null): bool
+    public function edit(string $keyToChange, $newValue = null): bool
     {
         if (! $this->has($keyToChange)) {
             throw new EnvException(__(ServiceProvider::TRANSLATE_PREFIX.'exceptions.keyNotExists', ['name' => $keyToChange]), 11);

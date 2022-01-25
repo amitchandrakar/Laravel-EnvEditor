@@ -4,7 +4,7 @@ namespace GeoSot\EnvEditor\Helpers;
 
 use Illuminate\Support\Arr;
 
-class EntryObj
+class EntryObj implements \JsonSerializable
 {
     public string $key;
 
@@ -84,5 +84,10 @@ class EntryObj
     public function toArray(): array
     {
         return get_object_vars($this);
+    }
+
+    public function jsonSerialize()
+    {
+        return $this->toArray();
     }
 }
